@@ -149,7 +149,7 @@ function renderSongs() {
 
             <input
                 value="${score}"
-                oninput="setScore('${song.id}', this.value)"
+                oninput="setScore('${song.id}', this.value, this)"
             >
 
             <div class="rank ${rankState}">
@@ -161,19 +161,29 @@ function renderSongs() {
     });
 }
 
-function setScore(id, val) {
+function setScore(id, val, inputEl) {
+
     if (val === "") {
         delete userRecords[id];
-    } else {
-        const n = Number(val);
-        if (isNaN(n)) return;
-        userRecords[id] = n;
+        save();
+        return;
     }
 
-    save();
-    renderSongs();
-}
+    let n = Number(val);
 
+    if (isNaN(n)) return;
+
+    if (n > 1000000) n = 1000000;
+    if (n < 0) n = 0;
+
+    userRecords[id] = n;
+    save();
+
+    // 🔥 화면에도 즉시 반영
+    if (inputEl) {
+        inputEl.value = n;
+    }
+}
 function getRank(s) {
     const n = Number(s);
 
