@@ -97,6 +97,7 @@ function renderLevels() {
         box.appendChild(b);
     }
 }
+
 function renderSongs() {
     const list = document.getElementById("songList");
     list.innerHTML = "";
@@ -124,7 +125,6 @@ function renderSongs() {
     songs.forEach(song => {
 
         const score = userRecords[song.id] || "";
-
         const rankState = getRank(score);
 
         const rankTextMap = {
@@ -149,10 +149,13 @@ function renderSongs() {
 
             <input
                 value="${score}"
-                oninput="setScore('${song.id}', this.value, this)"
+                oninput="handleScoreInput('${song.id}', this)"
             >
 
-            <div class="rank ${rankState}">
+            <div
+                id="rank-${song.id}"
+                class="rank ${rankState}"
+            >
                 ${rankText}
             </div>
         `;
@@ -161,7 +164,7 @@ function renderSongs() {
     });
 }
 
-function setScore(id, val, inputEl) {
+function setScore(id, val) {
 
     if (val === "") {
         delete userRecords[id];
@@ -173,17 +176,37 @@ function setScore(id, val, inputEl) {
 
     if (isNaN(n)) return;
 
+    // 100만 제한
     if (n > 1000000) n = 1000000;
     if (n < 0) n = 0;
 
     userRecords[id] = n;
     save();
 
-    // 🔥 화면에도 즉시 반영
+    // 🔥 화면 즉시 반영 (핵심)
+    const inputEl = document.querySelector(`input[oninput*="${id}"]`);
     if (inputEl) {
         inputEl.value = n;
     }
+
+    // rank 즉시 반영
+    const rankEl = document.getElementById(`rank-${id}`);
+    if (!rankEl) return;
+
+    const rankState = getRank(n);
+
+    const rankTextMap = {
+        "SSS_RAINBOW": "SSS",
+        "SSS": "SSS",
+        "SS": "SS",
+        "S": "S",
+        "-": "-"
+    };
+
+    rankEl.className = `rank ${rankState}`;
+    rankEl.textContent = rankTextMap[rankState];
 }
+
 function getRank(s) {
     const n = Number(s);
 
@@ -519,6 +542,13 @@ function addSong() {
         });
 
         save();
+
+        // 🔥 핵심: 입력값 초기화
+        document.getElementById("title").value = "";
+        document.getElementById("singleLevel").value = "";
+        document.getElementById("doubleLevel").value = "";
+        document.getElementById("img").value = "";
+
         closeRegister();
         renderSongs();
     }
@@ -578,6 +608,56 @@ function goBack() {
     document.getElementById("songToolbar").style.display = "none";
 
     document.getElementById("songList").innerHTML = "";
+}
+
+function handleScoreInput(id, el) {
+
+    let val = el.value;
+
+    if (val === "") {
+        delete userRecords[id];
+        save();
+        return;
+    }
+
+    // 숫자 변환
+    let n = Number(val);
+
+    if (isNaN(n)) {
+        el.value = "";
+        delete userRecords[id];
+        save();
+        return;
+    }
+
+    // 🔥 즉시 제한 (핵심)
+    if (n > 1000000) n = 1000000;
+    if (n < 0) n = 0;
+
+    // 화면 즉시 고정
+    if (Number(val) !== n) {
+        el.value = n;
+    }
+
+    userRecords[id] = n;
+    save();
+
+    // rank 즉시 반영
+    const rankEl = document.getElementById(`rank-${id}`);
+    if (!rankEl) return;
+
+    const rankState = getRank(n);
+
+    const rankTextMap = {
+        "SSS_RAINBOW": "SSS",
+        "SSS": "SSS",
+        "SS": "SS",
+        "S": "S",
+        "-": "-"
+    };
+
+    rankEl.className = `rank ${rankState}`;
+    rankEl.textContent = rankTextMap[rankState];
 }
 
 window.onload = () => {
