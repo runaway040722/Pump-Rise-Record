@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>Rise 기록기</title>
+<title>Rise 기록지</title>
 
 <link rel="stylesheet" href="style.css">
 <script src="app.js" defer></script>
@@ -14,9 +14,17 @@
 
     <!-- 헤더 -->
     <div class="header">
-        <h2>🎮 Rise 기록기</h2>
+        <h2>🎮 Rise 기록지</h2>
         <button onclick="openRegister()">+ 곡 등록</button>
     </div>
+
+    <div id="dashboard"></div>
+
+    <button onclick="toggleStats()" id="toggleStatsBtn">
+        📊 통계 펼치기
+    </button>
+
+<div id="levelGraph" style="display:none;"></div>
 
     <!-- 모드 -->
     <div class="mode">

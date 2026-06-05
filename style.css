@@ -242,3 +242,33 @@ button:hover {
 .import-btn:hover {
     background: #9b59b6;
 }
+
+#dashboard {
+    text-align: center;
+    font-weight: bold;
+    margin: 10px 0;
+    font-size: 16px;
+}
+
+#levelGraph {
+    margin: 10px 0;
+}
+
+.graph-row {
+    display: flex;
+    align-items: center;
+    margin: 4px 0;
+    gap: 8px;
+}
+
+.graph-bar {
+    height: 10px;
+    background: #2ecc71;
+    border-radius: 4px;
+}
+
+#toggleStatsBtn {
+    margin: 8px 0;
+    width: 100%;
+    background: #2c3e50;
+}

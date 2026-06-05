@@ -4,6 +4,7 @@ let mode = "single";
 let currentLevel = null;
 let showUnclearedOnly = false;
 let editingSong = null;
+let statsOpen = false;
 
 /* localStorage 안전 로딩 */
 try {
@@ -90,34 +91,53 @@ function renderSongs() {
         });
     }
 
-    // =========================
-    // 상단 통계 (레벨 들어갔을 때만)
-    // =========================
-    if (currentLevel && statsBox) {
+    // 🔥 정렬 추가
+songs.sort((a, b) => {
 
+    const getType = (title) => {
+
+        const first = title.trim()[0];
+
+        // 숫자 시작
+        if (/[0-9]/.test(first)) return 0;
+
+        // 영어 시작
+        if (/[a-zA-Z]/.test(first)) return 1;
+
+        // 나머지 (한글 포함)
+        return 2;
+    };
+
+    const typeA = getType(a.title);
+    const typeB = getType(b.title);
+
+    // 1차 정렬: 숫자 → 영어 → 한글
+    if (typeA !== typeB) return typeA - typeB;
+
+    // 2차 정렬: 내부 알파벳 정렬
+    return a.title.localeCompare(b.title, "ko");
+});
+
+    if (currentLevel && statsBox) {
         const stats = getLevelStats(currentLevel);
 
         statsBox.innerHTML = `
-            <div style="
-                text-align: center;
-                font-size: 18px;
-                font-weight: bold;
-            ">
+            <div style="text-align:center;font-size:18px;font-weight:bold;">
                 ${mode === "single" ? "S" : "D"}${currentLevel}
-                올퍼펙 비율 ${stats.percent}% (${stats.cleared}/${stats.total})
+                올퍼펙 비율 ${stats.percent}%
+                (${stats.cleared}/${stats.total})
             </div>
         `;
     } else if (statsBox) {
         statsBox.innerHTML = "";
     }
 
-    // =========================
-    // 곡 리스트 렌더링
-    // =========================
     songs.forEach(song => {
 
-        const score = userRecords[song.id] || 0;
-        const rankState = getRank(score);
+        const score = userRecords[song.id] ?? "";
+        const n = Number(score);
+
+        const rankState = getRank(n);
 
         const rankTextMap = {
             "SSS_RAINBOW": "SSS",
@@ -140,7 +160,7 @@ function renderSongs() {
             <input
                 value="${score}"
                 oninput="handleScoreInput('${song.id}', this)"
-            >
+            />
 
             <div id="rank-${song.id}" class="rank ${rankState}">
                 ${rankTextMap[rankState]}
@@ -149,6 +169,9 @@ function renderSongs() {
 
         list.appendChild(div);
     });
+
+    renderDashboard();
+    renderLevelGraph();
 }
 
 function setScore(id, val) {
@@ -637,7 +660,8 @@ function handleScoreInput(id, el) {
 
     let val = el.value;
 
-    if (val === "") {
+    // 빈칸 = 삭제
+    if (val.trim() === "") {
         delete userRecords[id];
         save();
         return;
@@ -652,31 +676,30 @@ function handleScoreInput(id, el) {
         return;
     }
 
+    // 제한
     if (n > 1000000) n = 1000000;
     if (n < 0) n = 0;
 
+    // 즉시 반영
+    userRecords[id] = n;
+    save();
+
+    // 강제 UI 보정 (100만 제한 포함)
     if (Number(val) !== n) {
         el.value = n;
     }
-
-    userRecords[id] = n;
-    save();
 
     const rankEl = document.getElementById(`rank-${id}`);
     if (!rankEl) return;
 
     const rankState = getRank(n);
 
-    const rankTextMap = {
-        "SSS_RAINBOW": "SSS",
-        "SSS": "SSS",
-        "SS": "SS",
-        "S": "S",
-        "-": "-"
-    };
-
     rankEl.className = `rank ${rankState}`;
-    rankEl.textContent = rankTextMap[rankState];
+    rankEl.textContent =
+        rankState === "SSS_RAINBOW" ? "SSS" :
+        rankState === "SSS" ? "SSS" :
+        rankState === "SS" ? "SS" :
+        rankState === "S" ? "S" : "-";
 }
 
 function getLevelStats(level) {
@@ -695,6 +718,104 @@ function getLevelStats(level) {
     const percent = total === 0 ? 0 : Math.floor((cleared / total) * 100);
 
     return { total, cleared, percent };
+}
+
+function getGlobalStats() {
+
+    let total = 0;
+    let cleared = 0;
+    let sss = 0;
+    let uncleared = 0;
+
+    Object.keys(songData).forEach(modeKey => {
+        Object.keys(songData[modeKey]).forEach(level => {
+            songData[modeKey][level].forEach(song => {
+
+                total++;
+
+                const score = Number(userRecords[song.id] || 0);
+
+                if (score >= 1000000) {
+                    cleared++;
+                    sss++;
+                } else {
+                    uncleared++;
+                }
+            });
+        });
+    });
+
+    const percent = total === 0 ? 0 : Math.floor((cleared / total) * 100);
+
+    return { total, cleared, sss, uncleared, percent };
+}
+
+function renderLevelGraph() {
+
+    const box = document.getElementById("levelGraph");
+    if (!box) return;
+
+    const max = mode === "single" ? 26 : 27;
+
+    box.innerHTML = "";
+
+    for (let i = 1; i <= max; i++) {
+
+        const stats = getLevelStats(i);
+
+        const percent = stats.total === 0
+            ? 0
+            : (stats.cleared / stats.total) * 100;
+
+        const row = document.createElement("div");
+        row.className = "graph-row";
+
+        row.innerHTML = `
+            <div style="width:60px;">S${i}</div>
+            <div style="flex:1; background:#333; height:10px; border-radius:4px;">
+                <div class="graph-bar" style="width:${percent}%"></div>
+            </div>
+            <div style="width:60px; text-align:right;">
+                ${stats.cleared}/${stats.total}
+            </div>
+        `;
+
+        box.appendChild(row);
+    }
+}
+
+function renderDashboard() {
+
+    const box = document.getElementById("dashboard");
+    if (!box) return;
+
+    const stats = getGlobalStats();
+
+    box.innerHTML = `
+        전체 곡 ${stats.total}개 |
+        올퍼펙 ${stats.cleared}개 |
+        미클리어 ${stats.uncleared}개 |
+        올퍼펙률 ${stats.percent}%
+    `;
+}
+
+function toggleStats() {
+
+    statsOpen = !statsOpen;
+
+    const graph = document.getElementById("levelGraph");
+    const btn = document.getElementById("toggleStatsBtn");
+
+    if (!graph || !btn) return;
+
+    if (statsOpen) {
+        graph.style.display = "block";
+        btn.textContent = "📊 통계 접기";
+        renderLevelGraph(); // 열릴 때만 렌더
+    } else {
+        graph.style.display = "none";
+        btn.textContent = "📊 통계 펼치기";
+    }
 }
 
 window.onload = () => {
