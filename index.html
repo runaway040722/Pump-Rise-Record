@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Rise 기록기</title>
+
+<link rel="stylesheet" href="style.css">
+<script src="app.js" defer></script>
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- 헤더 -->
+    <div class="header">
+        <h2>🎮 Rise 기록기</h2>
+        <button onclick="openRegister()">+ 곡 등록</button>
+    </div>
+
+    <!-- 모드 -->
+    <div class="mode">
+        <button onclick="changeMode('single')">
+            싱글
+        </button>
+
+        <button onclick="changeMode('double')">
+            하프더블
+        </button>
+    </div>
+
+    <!-- 레벨 -->
+    <div id="levelBox" class="levels"></div>
+
+    <!-- 곡 메뉴 -->
+    <div id="songToolbar" style="display:none;">
+
+        <input
+            id="searchBox"
+            placeholder="곡 검색"
+            oninput="renderSongs()"
+        >
+
+        <button
+            id="toggleBtn"
+            onclick="toggleUncleared()"
+        >
+            100만점 제외 보기
+        </button>
+
+        <button onclick="randomSong()">
+            곡 랜덤
+        </button>
+
+        <button onclick="randomUnclearedSong()">
+            100만점 제외 랜덤
+        </button>
+
+        <button onclick="goBack()">
+            뒤로가기
+        </button>
+
+    </div>
+
+    <hr>
+
+    <!-- 곡 리스트 -->
+    <div id="songList"></div>
+
+    <hr>
+
+    <!-- 백업 -->
+    <div id="backupArea">
+
+    <button
+        onclick="exportJSON()"
+        class="backup-btn"
+    >
+        백업
+    </button>
+
+    <button
+        onclick="document.getElementById('importFile').click()"
+        class="import-btn"
+    >
+        불러오기
+    </button>
+
+    <input
+        id="importFile"
+        type="file"
+        accept=".json"
+        onchange="importJSON(event)"
+        style="display:none;"
+    >
+
+</div>
+
+</div>
+
+<!-- 등록/수정 모달 -->
+<div id="registerModal" class="modal">
+
+    <div class="modal-box">
+
+        <h3>곡 등록</h3>
+
+        <!-- 신규 등록 -->
+        <input
+            id="title"
+            placeholder="곡 제목"
+        >
+
+        <input
+            id="singleLevel"
+            placeholder="싱글 Lv (예: 18 20)"
+        >
+
+        <input
+            id="doubleLevel"
+            placeholder="하프더블 Lv (예: 19 22)"
+        >
+
+        <input
+            type="file"
+            id="img"
+        >
+
+        <hr>
+
+        <!-- 수정/삭제 -->
+        <h3>곡 수정 / 삭제</h3>
+
+        <input
+            id="editSearch"
+            placeholder="곡 이름 검색"
+        >
+
+        <button onclick="findSongForEdit()">
+            곡 찾기
+        </button>
+
+        <div
+            id="editArea"
+            style="display:none;"
+        >
+
+            <input
+                id="editTitle"
+                placeholder="곡 제목"
+            >
+
+            <input
+                id="editSingle"
+                placeholder="싱글 Lv"
+            >
+
+            <input
+                id="editDouble"
+                placeholder="하프더블 Lv"
+            >
+
+            <input
+                type="file"
+                id="editImg"
+            >
+
+            <div class="modal-btns">
+
+                <button onclick="updateSong()">
+                    수정
+                </button>
+
+                <button onclick="deleteSong()">
+                    삭제
+                </button>
+
+            </div>
+
+        </div>
+
+        <hr>
+
+        <div class="modal-btns">
+
+            <button onclick="addSong()">
+                등록
+            </button>
+
+            <button onclick="closeRegister()">
+                닫기
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+</html>
