@@ -63,44 +63,12 @@ function changeMode(m) {
     renderLevels();
 }
 
-function renderLevels() {
-
-    const box = document.getElementById("levelBox");
-
-    if (!box) return;
-
-    box.innerHTML = "";
-
-    const max = mode === "single" ? 26 : 27;
-
-    for (let i = 1; i <= max; i++) {
-
-        const b = document.createElement("button");
-
-        b.innerText = "Lv." + i;
-
-        b.onclick = () => {
-
-            currentLevel = i;
-
-            document.getElementById("levelBox").style.display = "none";
-
-            document.querySelector(".mode").style.display = "none";
-
-            document.getElementById("backupArea").style.display = "none";
-
-            document.getElementById("songToolbar").style.display = "flex";
-
-            renderSongs();
-        };
-
-        box.appendChild(b);
-    }
-}
-
 function renderSongs() {
+
     const list = document.getElementById("songList");
     list.innerHTML = "";
+
+    const statsBox = document.getElementById("levelStats");
 
     let songs = songData?.[mode]?.[currentLevel] || [];
 
@@ -122,9 +90,33 @@ function renderSongs() {
         });
     }
 
+    // =========================
+    // 상단 통계 (레벨 들어갔을 때만)
+    // =========================
+    if (currentLevel && statsBox) {
+
+        const stats = getLevelStats(currentLevel);
+
+        statsBox.innerHTML = `
+            <div style="
+                text-align: center;
+                font-size: 18px;
+                font-weight: bold;
+            ">
+                ${mode === "single" ? "S" : "D"}${currentLevel}
+                올퍼펙 비율 ${stats.percent}% (${stats.cleared}/${stats.total})
+            </div>
+        `;
+    } else if (statsBox) {
+        statsBox.innerHTML = "";
+    }
+
+    // =========================
+    // 곡 리스트 렌더링
+    // =========================
     songs.forEach(song => {
 
-        const score = userRecords[song.id] || "";
+        const score = userRecords[song.id] || 0;
         const rankState = getRank(score);
 
         const rankTextMap = {
@@ -134,8 +126,6 @@ function renderSongs() {
             "S": "S",
             "-": "-"
         };
-
-        const rankText = rankTextMap[rankState];
 
         const div = document.createElement("div");
         div.className = "song";
@@ -152,11 +142,8 @@ function renderSongs() {
                 oninput="handleScoreInput('${song.id}', this)"
             >
 
-            <div
-                id="rank-${song.id}"
-                class="rank ${rankState}"
-            >
-                ${rankText}
+            <div id="rank-${song.id}" class="rank ${rankState}">
+                ${rankTextMap[rankState]}
             </div>
         `;
 
@@ -559,9 +546,41 @@ function addSong() {
     else process("");
 }
 
-/* =======================
-   EXPORT / IMPORT
-======================= */
+function renderLevels() {
+
+    const box = document.getElementById("levelBox");
+
+    if (!box) return;
+
+    box.innerHTML = "";
+
+    const max = mode === "single" ? 26 : 27;
+
+    for (let i = 1; i <= max; i++) {
+
+        const stats = getLevelStats(i);
+
+        const b = document.createElement("button");
+
+        b.innerHTML = `
+            <div>Lv.${i}</div>
+        `;
+
+        b.onclick = () => {
+
+            currentLevel = i;
+
+            document.getElementById("levelBox").style.display = "none";
+            document.querySelector(".mode").style.display = "none";
+            document.getElementById("backupArea").style.display = "none";
+            document.getElementById("songToolbar").style.display = "flex";
+
+            renderSongs();
+        };
+
+        box.appendChild(b);
+    }
+}
 
 function exportJSON() {
     const blob = new Blob(
@@ -608,6 +627,10 @@ function goBack() {
     document.getElementById("songToolbar").style.display = "none";
 
     document.getElementById("songList").innerHTML = "";
+
+    // 🔥 추가 (핵심)
+    const statsBox = document.getElementById("levelStats");
+    if (statsBox) statsBox.innerHTML = "";
 }
 
 function handleScoreInput(id, el) {
@@ -620,7 +643,6 @@ function handleScoreInput(id, el) {
         return;
     }
 
-    // 숫자 변환
     let n = Number(val);
 
     if (isNaN(n)) {
@@ -630,11 +652,9 @@ function handleScoreInput(id, el) {
         return;
     }
 
-    // 🔥 즉시 제한 (핵심)
     if (n > 1000000) n = 1000000;
     if (n < 0) n = 0;
 
-    // 화면 즉시 고정
     if (Number(val) !== n) {
         el.value = n;
     }
@@ -642,7 +662,6 @@ function handleScoreInput(id, el) {
     userRecords[id] = n;
     save();
 
-    // rank 즉시 반영
     const rankEl = document.getElementById(`rank-${id}`);
     if (!rankEl) return;
 
@@ -658,6 +677,24 @@ function handleScoreInput(id, el) {
 
     rankEl.className = `rank ${rankState}`;
     rankEl.textContent = rankTextMap[rankState];
+}
+
+function getLevelStats(level) {
+
+    const songs = songData?.[mode]?.[level] || [];
+
+    const total = songs.length;
+
+    let cleared = 0;
+
+    songs.forEach(song => {
+        const score = Number(userRecords[song.id] || 0);
+        if (score >= 1000000) cleared++;
+    });
+
+    const percent = total === 0 ? 0 : Math.floor((cleared / total) * 100);
+
+    return { total, cleared, percent };
 }
 
 window.onload = () => {
