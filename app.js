@@ -660,46 +660,46 @@ function handleScoreInput(id, el) {
 
     let val = el.value;
 
-    // 빈칸 = 삭제
     if (val.trim() === "") {
         delete userRecords[id];
         save();
+        updateRankOnly(id);
         return;
     }
 
     let n = Number(val);
+    if (isNaN(n)) return;
 
-    if (isNaN(n)) {
-        el.value = "";
-        delete userRecords[id];
-        save();
-        return;
-    }
-
-    // 제한
     if (n > 1000000) n = 1000000;
     if (n < 0) n = 0;
 
-    // 즉시 반영
     userRecords[id] = n;
     save();
 
-    // 강제 UI 보정 (100만 제한 포함)
     if (Number(val) !== n) {
         el.value = n;
     }
+
+    updateRankOnly(id, n);
+}
+
+function updateRankOnly(id, n = userRecords[id] || 0) {
 
     const rankEl = document.getElementById(`rank-${id}`);
     if (!rankEl) return;
 
     const rankState = getRank(n);
 
+    const map = {
+        "SSS_RAINBOW": "SSS",
+        "SSS": "SSS",
+        "SS": "SS",
+        "S": "S",
+        "-": "-"
+    };
+
     rankEl.className = `rank ${rankState}`;
-    rankEl.textContent =
-        rankState === "SSS_RAINBOW" ? "SSS" :
-        rankState === "SSS" ? "SSS" :
-        rankState === "SS" ? "SS" :
-        rankState === "S" ? "S" : "-";
+    rankEl.textContent = map[rankState];
 }
 
 function getLevelStats(level) {
