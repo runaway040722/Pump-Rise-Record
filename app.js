@@ -244,90 +244,73 @@ function findSongForEdit() {
 
     const keyword =
         document.getElementById("editSearch")
-        .value
-        .trim()
-        .toLowerCase();
+            .value
+            .trim()
+            .toLowerCase();
 
     if (!keyword) return;
 
     let foundTitle = null;
+    let foundImage = "";
 
     const singleLevels = [];
     const doubleLevels = [];
 
-    let foundImage = "";
+    const singleMap = new Map(); // level -> song object
+    const doubleMap = new Map();
 
     Object.keys(songData.single).forEach(level => {
 
         songData.single[level].forEach(song => {
 
-            if (
-                song.title.toLowerCase() === keyword
-            ) {
+            if (song.title.toLowerCase() === keyword) {
 
                 foundTitle = song.title;
+                foundImage = song.image || foundImage;
 
                 singleLevels.push(level);
-
-                foundImage = song.image || "";
+                singleMap.set(level, song);
             }
-
         });
-
     });
 
     Object.keys(songData.double).forEach(level => {
 
         songData.double[level].forEach(song => {
 
-            if (
-                song.title.toLowerCase() === keyword
-            ) {
+            if (song.title.toLowerCase() === keyword) {
 
                 foundTitle = song.title;
+                foundImage = song.image || foundImage;
 
                 doubleLevels.push(level);
-
-                if (!foundImage)
-                    foundImage = song.image || "";
+                doubleMap.set(level, song);
             }
-
         });
-
     });
 
     if (!foundTitle) {
-
         alert("곡을 찾을 수 없습니다.");
-
         return;
     }
 
     editingSong = {
-        title: foundTitle
+        title: foundTitle,
+        singleMap,
+        doubleMap
     };
 
-    document.getElementById("editArea").style.display =
-        "block";
+    document.getElementById("editArea").style.display = "block";
 
-    document.getElementById("editTitle").value =
-        foundTitle;
+    document.getElementById("editTitle").value = foundTitle;
+    document.getElementById("editSingle").value = singleLevels.join(" ");
+    document.getElementById("editDouble").value = doubleLevels.join(" ");
 
-    document.getElementById("editSingle").value =
-        singleLevels.join(" ");
-
-    document.getElementById("editDouble").value =
-        doubleLevels.join(" ");
-
-    const preview =
-        document.getElementById("editPreview");
+    const preview = document.getElementById("editPreview");
 
     if (preview) {
-
         preview.src = foundImage;
-
-        preview.style.display =
-            foundImage ? "block" : "none";
+        preview.style.display = foundImage ? "block" : "none";
     }
 }
 
@@ -362,98 +345,115 @@ function updateSong() {
 
     const newTitle =
         document.getElementById("editTitle")
-        .value
-        .trim();
+            .value
+            .trim();
 
-    const singleLevels =
+    const newSingleLevels =
         document.getElementById("editSingle")
-        .value
-        .trim()
-        .split(" ")
-        .filter(v => v);
+            .value
+            .trim()
+            .split(" ")
+            .filter(v => v);
 
-    const doubleLevels =
+    const newDoubleLevels =
         document.getElementById("editDouble")
-        .value
-        .trim()
-        .split(" ")
-        .filter(v => v);
+            .value
+            .trim()
+            .split(" ")
+            .filter(v => v);
 
     const file =
-        document.getElementById("editImg")
-        .files[0];
+        document.getElementById("editImg").files[0];
 
     function apply(newImage) {
 
         let oldImage = "";
 
-        /* 기존 곡 삭제 */
+        const keptRecords = new Map(); // id 유지용
+
+        const removedIds = [];
+
+        // -------------------------
+        // 1. 기존 곡 전부 스캔 + 제거
+        // -------------------------
         ["single", "double"].forEach(modeName => {
 
             Object.keys(songData[modeName]).forEach(level => {
 
+                const newList = [];
+
                 songData[modeName][level].forEach(song => {
 
-                    if (
-                        song.title ===
-                        editingSong.title
-                    ) {
-                        oldImage =
-                            song.image || oldImage;
-                    }
+                    if (song.title === editingSong.title) {
 
+                        oldImage = song.image || oldImage;
+
+                        const stillExists =
+                            (modeName === "single" && newSingleLevels.includes(level)) ||
+                            (modeName === "double" && newDoubleLevels.includes(level));
+
+                        if (stillExists) {
+                            keptRecords.set(song.id, song);
+                        } else {
+                            removedIds.push(song.id);
+                        }
+
+                    } else {
+                        newList.push(song);
+                    }
                 });
 
-                songData[modeName][level] =
-                    songData[modeName][level]
-                    .filter(
-                        song =>
-                            song.title !==
-                            editingSong.title
-                    );
-
+                songData[modeName][level] = newList;
             });
-
         });
 
-        const finalImage =
-            newImage || oldImage;
-
-        /* 싱글 재등록 */
-        singleLevels.forEach(level => {
-
-            if (!songData.single[level]) {
-                songData.single[level] = [];
-            }
-
-            songData.single[level].push({
-                id: crypto.randomUUID(),
-                title: newTitle,
-                image: finalImage
-            });
-
+        // -------------------------
+        // 2. 삭제된 난이도 점수 제거
+        // -------------------------
+        removedIds.forEach(id => {
+            delete userRecords[id];
         });
 
-        /* 하프더블 재등록 */
-        doubleLevels.forEach(level => {
+        const finalImage = newImage || oldImage;
 
-            if (!songData.double[level]) {
-                songData.double[level] = [];
-            }
+        // -------------------------
+        // 3. 유지 + 신규 재등록
+        // -------------------------
+        function rebuild(levels, modeName) {
 
-            songData.double[level].push({
-                id: crypto.randomUUID(),
-                title: newTitle,
-                image: finalImage
+            levels.forEach(level => {
+
+                if (!songData[modeName][level]) {
+                    songData[modeName][level] = [];
+                }
+
+                let existing = songData[modeName][level].find(
+                    s => s.title === newTitle
+                );
+
+                if (existing) {
+                    // 이미 존재 → 유지
+                    existing.title = newTitle;
+                    existing.image = finalImage;
+
+                } else {
+
+                    // 새로 추가된 난이도 → 새 ID
+                    songData[modeName][level].push({
+                        id: crypto.randomUUID(),
+                        title: newTitle,
+                        image: finalImage
+                    });
+                }
             });
+        }
 
-        });
+        rebuild(newSingleLevels, "single");
+        rebuild(newDoubleLevels, "double");
 
         save();
 
-        editingSong = {
-            title: newTitle
-        };
+        editingSong = null;
 
         renderSongs();
 
@@ -461,14 +461,11 @@ function updateSong() {
     }
 
     if (!file) {
-
         apply(null);
-
         return;
     }
 
-    const reader =
-        new FileReader();
+    const reader = new FileReader();
 
     reader.onload = e => {
         apply(e.target.result);
