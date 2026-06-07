@@ -664,6 +664,10 @@ function handleScoreInput(id, el) {
         delete userRecords[id];
         save();
         updateRankOnly(id);
+        
+        // 데이터가 바뀌었으므로 상단 대시보드와 통계도 실시간 갱신
+        renderDashboard();
+        if (statsOpen) renderLevelGraph();
         return;
     }
 
@@ -680,7 +684,29 @@ function handleScoreInput(id, el) {
         el.value = n;
     }
 
-    updateRankOnly(id, n);
+    // 🔴 [수정 및 추가 핵심 로직]
+    // 만약 '100만점 제외' 필터가 켜져 있고, 방금 입력한 점수가 100만점이라면 목록에서 즉시 지워야 하므로 전체 리렌더링
+    if (showUnclearedOnly && n === 1000000) {
+        renderSongs(); 
+    } else {
+        // 그 외의 경우(필터가 꺼져있거나 100만점이 아닐 때)는 렉 줄이기를 위해 랭크와 상단 대시보드만 즉시 반영
+        updateRankOnly(id, n);
+        renderDashboard();
+        
+        // 현재 레벨 통계 문자열(올퍼펙 비율)도 실시간 업데이트
+        const statsBox = document.getElementById("levelStats");
+        if (currentLevel && statsBox) {
+            const stats = getLevelStats(currentLevel);
+            statsBox.innerHTML = `
+                <div style="text-align:center;font-size:18px;font-weight:bold;">
+                    ${mode === "single" ? "S" : "D"}${currentLevel}
+                    올퍼펙 비율 ${stats.percent}%
+                    (${stats.cleared}/${stats.total})
+                </div>
+            `;
+        }
+        if (statsOpen) renderLevelGraph();
+    }
 }
 
 function updateRankOnly(id, n = userRecords[id] || 0) {
