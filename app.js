@@ -570,37 +570,27 @@ function addSong() {
 }
 
 function renderLevels() {
-
     const box = document.getElementById("levelBox");
-
     if (!box) return;
-
     box.innerHTML = "";
 
+    // 🔴 모드에 따라 시작 레벨과 최대 레벨 설정 (더블은 4부터)
+    const start = mode === "single" ? 1 : 4;
     const max = mode === "single" ? 26 : 27;
 
-    for (let i = 1; i <= max; i++) {
-
+    // start부터 반복문을 돌려 버튼 생성
+    for (let i = start; i <= max; i++) {
         const stats = getLevelStats(i);
-
         const b = document.createElement("button");
-
-        b.innerHTML = `
-            <div>Lv.${i}</div>
-        `;
-
+        b.innerHTML = `<div>Lv.${i}</div>`;
         b.onclick = () => {
-
             currentLevel = i;
-
             document.getElementById("levelBox").style.display = "none";
             document.querySelector(".mode").style.display = "none";
             document.getElementById("backupArea").style.display = "none";
             document.getElementById("songToolbar").style.display = "flex";
-
             renderSongs();
         };
-
         box.appendChild(b);
     }
 }
@@ -777,27 +767,27 @@ function getGlobalStats() {
 }
 
 function renderLevelGraph() {
-
     const box = document.getElementById("levelGraph");
     if (!box) return;
 
+    // 🔴 모드에 따라 시작 레벨과 최대 레벨을 유동적으로 설정
+    const start = mode === "single" ? 1 : 4;
     const max = mode === "single" ? 26 : 27;
-
+    
     box.innerHTML = "";
 
-    for (let i = 1; i <= max; i++) {
-
+    // start(싱글은 1, 더블은 4)부터 반복문 시작
+    for (let i = start; i <= max; i++) {
         const stats = getLevelStats(i);
-
-        const percent = stats.total === 0
-            ? 0
-            : (stats.cleared / stats.total) * 100;
+        const percent = stats.total === 0 ? 0 : (stats.cleared / stats.total) * 100;
 
         const row = document.createElement("div");
         row.className = "graph-row";
 
+        const modePrefix = mode === "single" ? "S" : "D";
+
         row.innerHTML = `
-            <div style="width:60px;">S${i}</div>
+            <div style="width:60px;">${modePrefix}${i}</div>
             <div style="flex:1; background:#333; height:10px; border-radius:4px;">
                 <div class="graph-bar" style="width:${percent}%"></div>
             </div>
