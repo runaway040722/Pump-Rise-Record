@@ -32,36 +32,27 @@ function save() {
 function changeMode(m) {
 
     mode = m;
-
     currentLevel = null;
 
-    const levelBox =
-        document.getElementById("levelBox");
+    const levelBox = document.getElementById("levelBox");
+    const songToolbar = document.getElementById("songToolbar");
+    const backupArea = document.getElementById("backupArea");
+    const modeBox = document.querySelector(".mode");
 
-    const songToolbar =
-        document.getElementById("songToolbar");
-
-    const backupArea =
-        document.getElementById("backupArea");
-
-    const modeBox =
-        document.querySelector(".mode");
-
-    if (modeBox)
-        modeBox.style.display = "block";
-
-    if (backupArea)
-        backupArea.style.display = "block";
-
-    if (levelBox)
-        levelBox.style.display = "block";
-
-    if (songToolbar)
-        songToolbar.style.display = "none";
+    if (modeBox) modeBox.style.display = "block";
+    if (backupArea) backupArea.style.display = "block";
+    if (levelBox) levelBox.style.display = "block";
+    if (songToolbar) songToolbar.style.display = "none";
 
     document.getElementById("songList").innerHTML = "";
 
+    // 1. 선택한 모드(싱글 1~26 / 더블 4~27)에 맞게 레벨 버튼 재배치
     renderLevels();
+
+    // 🔴 [핵심 수정] 통계가 펼쳐져 있는 상태라면, 전환된 모드에 맞춰 그래프도 즉시 실시간 갱신!
+    if (statsOpen) {
+        renderLevelGraph();
+    }
 }
 
 function renderSongs() {
