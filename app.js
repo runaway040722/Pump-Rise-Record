@@ -56,6 +56,7 @@ function getRiseRank(n) {
 }
 
 const ARCADE_RANK_INFO = {
+    SSSap: { text: "SSS+", cls: "arc-SSSap" },
     SSSp: { text: "SSS+", cls: "arc-SSSp" },
     SSS:  { text: "SSS",  cls: "arc-SSS" },
     SSp:  { text: "SS+",  cls: "arc-SSp" },
@@ -72,7 +73,7 @@ const ARCADE_RANK_INFO = {
 };
 
 function getArcadeRank(n) {
-    if (n >= 1000000) return "SSSap";
+    if (n == 1000000) return "SSSap";
     if (n >= 995000) return "SSSp";
     if (n >= 990000) return "SSS";
     if (n >= 985000) return "SSp";
