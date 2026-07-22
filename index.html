@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>Rise 기록지</title>
+<title>Rise & Arcade 기록지</title>
 
 <link rel="stylesheet" href="style.css">
 <script src="app.js" defer></script>
@@ -12,9 +12,15 @@
 
 <div class="container">
 
+    <!-- 게임 선택 -->
+    <div class="game-select">
+        <button data-game="rise" onclick="changeGame('rise')">Rise</button>
+        <button data-game="arcade" onclick="changeGame('arcade')">Arcade</button>
+    </div>
+
     <!-- 헤더 -->
     <div class="header">
-        <h2>🎮 Rise 기록지</h2>
+        <h2 id="gameTitle" onclick="handleTitleClick()">🎮 Rise 기록지</h2>
         <button onclick="openRegister()">+ 곡 등록</button>
     </div>
 
@@ -24,18 +30,10 @@
         📊 통계 펼치기
     </button>
 
-<div id="levelGraph" style="display:none;"></div>
+    <div id="levelGraph" style="display:none;"></div>
 
-    <!-- 모드 -->
-    <div class="mode">
-        <button onclick="changeMode('single')">
-            싱글
-        </button>
-
-        <button onclick="changeMode('double')">
-            하프더블
-        </button>
-    </div>
+    <!-- 모드 (게임별로 자동 렌더링) -->
+    <div id="modeBox" class="mode"></div>
 
     <!-- 레벨 -->
     <div id="levelBox" class="levels"></div>
@@ -121,13 +119,23 @@
         >
 
         <input
-            id="singleLevel"
-            placeholder="싱글 Lv (예: 18 20)"
+            id="riseSingleLevel"
+            placeholder="Rise 싱글 Lv (예: 18 20)"
         >
 
         <input
-            id="doubleLevel"
-            placeholder="하프더블 Lv (예: 19 22)"
+            id="riseDoubleLevel"
+            placeholder="Rise 하프더블 Lv (예: 19 22)"
+        >
+
+        <input
+            id="arcadeSingleLevel"
+            placeholder="Arcade 싱글 Lv (예: 18 20)"
+        >
+
+        <input
+            id="arcadeDoubleLevel"
+            placeholder="Arcade 더블 Lv (예: 19 22)"
         >
 
         <input
@@ -160,14 +168,26 @@
             >
 
             <input
-                id="editSingle"
-                placeholder="싱글 Lv"
+                id="editRiseSingle"
+                placeholder="Rise 싱글 Lv"
             >
 
             <input
-                id="editDouble"
-                placeholder="하프더블 Lv"
+                id="editRiseDouble"
+                placeholder="Rise 하프더블 Lv"
             >
+
+            <input
+                id="editArcadeSingle"
+                placeholder="Arcade 싱글 Lv"
+            >
+
+            <input
+                id="editArcadeDouble"
+                placeholder="Arcade 더블 Lv"
+            >
+
+            <img id="editPreview" style="display:none;">
 
             <input
                 type="file"
@@ -200,6 +220,51 @@
                 닫기
             </button>
 
+        </div>
+
+    </div>
+
+</div>
+
+<!-- 개발자 패널 (제목 5번 클릭 시 표시) -->
+<div id="devModal" class="modal">
+
+    <div class="modal-box">
+
+        <h3>🛠 개발자 패널</h3>
+
+        <p style="font-size:13px; color:#aaa; line-height:1.5;">
+            배포용 곡 목록은 이미지와 개인 점수를 제외하고
+            곡 제목 + 난이도만 담아서 내보냅니다.
+        </p>
+
+        <button onclick="exportSongListOnly()" style="width:100%;">
+            📦 배포용 곡 목록 내보내기 (이미지/점수 제외)
+        </button>
+
+        <hr>
+
+        <p style="font-size:13px; color:#e74c3c; line-height:1.5;">
+            아래는 모든 게임의 점수 기록을 전부 삭제합니다.
+            (곡 목록/난이도는 유지됩니다) 되돌릴 수 없으니
+            확인 문구를 정확히 입력해야 실행됩니다.
+        </p>
+
+        <input
+            id="devConfirmInput"
+            placeholder='확인을 위해 "삭제" 입력'
+        >
+
+        <button onclick="resetAllRecords()" style="width:100%; background:#c0392b;">
+            🗑 전체 점수 기록 삭제
+        </button>
+
+        <hr>
+
+        <div class="modal-btns">
+            <button onclick="closeDevPanel()">
+                닫기
+            </button>
         </div>
 
     </div>

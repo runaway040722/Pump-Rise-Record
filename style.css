@@ -9,6 +9,28 @@ body {
     margin: auto;
 }
 
+/* 게임 선택 */
+.game-select {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.game-select button {
+    background: #1b1f27;
+    font-weight: bold;
+    min-width: 100px;
+}
+
+.game-select button.active-game {
+    background: #16a085;
+}
+
+.game-select button.active-game:hover {
+    background: #1abc9c;
+}
+
 /* 헤더 */
 .header {
     display: flex;
@@ -36,13 +58,26 @@ button:hover {
     background: #34495e;
 }
 
+/* 모드 */
+.mode {
+    display: flex;
+}
+
 /* 모드 버튼 */
-.mode button:nth-child(1) {
+.mode button.mode-single {
     background: #c0392b;
 }
 
-.mode button:nth-child(2) {
+.mode button.mode-single:hover {
+    background: #e74c3c;
+}
+
+.mode button.mode-double {
     background: #2980b9;
+}
+
+.mode button.mode-double:hover {
+    background: #3498db;
 }
 
 /* 레벨 버튼 */
@@ -138,6 +173,8 @@ button:hover {
     background: #333;
 }
 
+/* ===== Rise 랭크 ===== */
+
 /* S */
 .rank.S {
     background: #cd7f32;
@@ -156,7 +193,7 @@ button:hover {
     color: black;
 }
 
-/* 100만점 */
+/* 100만점 (Rise) */
 .rank.SSS_RAINBOW {
     background: linear-gradient(
         90deg,
@@ -186,6 +223,93 @@ button:hover {
     }
 }
 
+/* ===== Arcade 랭크 ===== */
+
+/* SSS+ : 무지개 (100만점 급) */
+.rank.arc-SSSap {
+    background: linear-gradient(
+        90deg,
+        red,
+        orange,
+        yellow,
+        green,
+        cyan,
+        blue,
+        violet
+    );
+
+    background-size: 400% 400%;
+
+    animation: rainbowMove 3s linear infinite;
+
+    color: black;
+}
+
+/* SSS : 다이아몬드색 */
+.rank.arc-SSSp {
+    background: linear-gradient(135deg, #e0f7ff, #ffffff 50%, #a6e6ff);
+    color: #0a3d62;
+}
+
+/* SSS : 다이아몬드색 */
+.rank.arc-SSS {
+    background: linear-gradient(135deg, #e0f7ff, #ffffff 50%, #a6e6ff);
+    color: #0a3d62;
+}
+
+/* SS+ / SS / S+ / S : 금색 계열 */
+.rank.arc-SSp {
+    background: #ffe44d;
+    color: black;
+}
+
+.rank.arc-SS {
+    background: #ffd700;
+    color: black;
+}
+
+.rank.arc-Sp {
+    background: #e6b800;
+    color: black;
+}
+
+.rank.arc-S {
+    background: #c9a000;
+    color: black;
+}
+
+/* AAA+ / AAA : 은색 계열 */
+.rank.arc-AAAp {
+    background: #ececec;
+    color: black;
+}
+
+.rank.arc-AAA {
+    background: silver;
+    color: black;
+}
+
+/* AA+ / AA / A+ / A : 동색 계열 */
+.rank.arc-AAp {
+    background: #e0985c;
+    color: black;
+}
+
+.rank.arc-AA {
+    background: #cd7f32;
+    color: black;
+}
+
+.rank.arc-Ap {
+    background: #a8632a;
+    color: white;
+}
+
+.rank.arc-A {
+    background: #7d4a1f;
+    color: white;
+}
+
 /* 모달 */
 .modal {
     display: none;
@@ -204,7 +328,9 @@ button:hover {
 .modal-box {
     width: 300px;
 
-    margin: 100px auto;
+    margin: 60px auto;
+    max-height: 85vh;
+    overflow-y: auto;
 
     padding: 20px;
 
@@ -220,6 +346,16 @@ button:hover {
     margin: 5px 0;
 
     box-sizing: border-box;
+}
+
+#editPreview {
+    width: 60px;
+    height: 60px;
+
+    object-fit: cover;
+    border-radius: 6px;
+
+    margin: 6px 0;
 }
 
 .modal-btns {
