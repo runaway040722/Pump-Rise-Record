@@ -491,6 +491,419 @@ button:hover {
     color: #0a3d62;
 }
 
+/* =========================================================
+   Phoenix Pump Ability / 칭호 UI
+========================================================= */
+
+.util-menu {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.util-menu button {
+    background: #6c3483;
+}
+
+.util-menu button:hover {
+    background: #8e44ad;
+}
+
+/* 프로필 카드 (왼쪽 상단): 원(Total Pump Ability) + 대표 칭호 바 + 이름 바 */
+.profile-card {
+    display: flex;
+    align-items: stretch;
+
+    max-width: 340px;
+    margin: 4px 0 10px;
+
+    background: #12151c;
+    border: 1px solid #2a2e37;
+    border-radius: 10px;
+
+    overflow: hidden;
+}
+
+.profile-avatar {
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    margin: 6px;
+    border-radius: 50%;
+
+    background: #2c313c;
+    color: #888;
+
+    font-weight: bold;
+    font-size: 11px;
+    text-align: center;
+    line-height: 1.1;
+    padding: 2px;
+
+    box-sizing: border-box;
+}
+
+.profile-info {
+    flex: 1;
+    min-width: 0;
+
+    display: flex;
+    flex-direction: column;
+}
+
+.profile-title-bar {
+    flex: 1;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: #1b1f27;
+
+    font-weight: bold;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+
+    cursor: pointer;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0 8px;
+}
+
+.profile-name-bar {
+    flex: 1;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0 10px;
+
+    background: #0f1115;
+    color: #ccc;
+    font-size: 12px;
+
+    cursor: pointer;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.profile-name-bar:hover {
+    color: white;
+}
+
+/* 프로필 원(아바타)의 채우기 색 = 현재 도달한 Total Pump Ability 등급 색 */
+.avatar-none {
+    background: #2c313c;
+    color: #888;
+}
+
+.avatar-bronze {
+    background: #cd7f32;
+    color: black;
+}
+
+.avatar-silver {
+    background: silver;
+    color: black;
+}
+
+.avatar-gold {
+    background: #ffd700;
+    color: black;
+}
+
+.avatar-diamond-light {
+    background: linear-gradient(135deg, #e0f7ff, #ffffff 50%, #a6e6ff);
+    color: #0a3d62;
+}
+
+.avatar-diamond-dark {
+    background: linear-gradient(135deg, #2980b9, #6dd5fa 50%, #2980b9);
+    color: white;
+}
+
+.avatar-ruby {
+    background: linear-gradient(135deg, #6e0021, #ff004f 50%, #6e0021);
+    color: white;
+}
+
+.avatar-amethyst {
+    background: linear-gradient(135deg, #4a0e6e, #9b59b6 50%, #4a0e6e);
+    color: white;
+}
+
+.avatar-rainbow {
+    background: linear-gradient(
+        90deg,
+        red, orange, yellow, green, cyan, blue, violet
+    );
+    background-size: 400% 400%;
+    animation: rainbowMove 3s linear infinite;
+    color: black;
+}
+
+/* 칭호 등급별 "텍스트 색상" (배경 없음) */
+.title-name-text {
+    font-weight: bold;
+}
+
+.title-text-bronze {
+    color: #cd7f32;
+}
+
+.title-text-silver {
+    color: silver;
+}
+
+.title-text-gold {
+    color: #ffd700;
+}
+
+.title-text-diamond-light {
+    background: linear-gradient(135deg, #e0f7ff, #ffffff 50%, #a6e6ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.title-text-diamond-dark {
+    background: linear-gradient(135deg, #2980b9, #6dd5fa 50%, #2980b9);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.title-text-ruby {
+    background: linear-gradient(135deg, #6e0021, #ff004f 50%, #6e0021);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.title-text-amethyst {
+    background: linear-gradient(135deg, #4a0e6e, #9b59b6 50%, #4a0e6e);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.title-text-rainbow {
+    background: linear-gradient(
+        90deg,
+        red, orange, yellow, green, cyan, blue, violet
+    );
+    background-size: 400% 400%;
+    animation: rainbowMove 3s linear infinite;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+/* Phoenix Pump Ability 패널 */
+#ratingModal .modal-box {
+    width: min(94vw, 620px);
+    overflow-x: auto;
+}
+
+.rating-summary {
+    text-align: center;
+    margin-bottom: 12px;
+}
+
+.rating-summary .rating-main-title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.rating-summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 10px;
+    background: #1b1f27;
+    border-radius: 6px;
+    margin: 4px 0;
+}
+
+.rating-summary-row .label {
+    color: #ccc;
+}
+
+.rating-summary-row .value {
+    font-weight: bold;
+    color: #f1c40f;
+}
+
+/* 싱글 / 더블 / 전체 탭 */
+.pa-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin: 10px 0 4px;
+}
+
+.pa-tab-btn {
+    height: 28px;
+    padding: 0 12px;
+    margin: 0;
+    font-size: 12px;
+    background: #2c3e50;
+}
+
+.pa-tab-btn:hover {
+    background: #34495e;
+}
+
+.pa-tab-btn.active {
+    background: #16a085;
+}
+
+.rating-list-title {
+    text-align: center;
+    font-weight: bold;
+    margin: 10px 0 6px;
+    color: #ccc;
+}
+
+.rating-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    background: #1b1f27;
+    border-radius: 6px;
+    margin: 4px 0;
+    white-space: nowrap;
+    font-size: 13px;
+}
+
+.rating-row .rating-rank {
+    width: 28px;
+    color: #888;
+    flex-shrink: 0;
+}
+
+.rating-row .rating-song {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rating-row .rating-value {
+    color: #f1c40f;
+    font-weight: bold;
+}
+
+/* 칭호 패널 */
+.title-section-heading {
+    font-weight: bold;
+    font-size: 15px;
+    margin: 14px 0 6px;
+    color: #fff;
+    border-bottom: 1px solid #333;
+    padding-bottom: 4px;
+}
+
+.title-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: #1b1f27;
+    border-radius: 6px;
+    margin: 6px 0;
+}
+
+.title-item.locked {
+    opacity: 0.5;
+}
+
+.title-item .title-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.title-item .title-item-name {
+    font-weight: bold;
+    font-size: 13px;
+}
+
+.title-item .title-item-condition {
+    font-size: 11px;
+    color: #999;
+    margin-top: 2px;
+}
+
+.title-item .title-item-status {
+    font-size: 12px;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.title-item .title-item-status.unlocked {
+    color: #2ecc71;
+}
+
+.title-item .title-item-status.locked-status {
+    color: #888;
+}
+
+.title-item .title-select-btn {
+    height: 28px;
+    padding: 0 8px;
+    margin: 0;
+    font-size: 11px;
+    background: #16a085;
+}
+
+.title-item .title-select-btn:hover {
+    background: #1abc9c;
+}
+
+.title-item .title-select-btn.is-selected {
+    background: #e67e22;
+}
+
+/* 칭호 획득 토스트 */
+.title-toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+
+    background: #16a085;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+
+    padding: 12px 20px;
+    border-radius: 8px;
+
+    box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.title-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
 /* EG / SG : 금색 */
 .clear-select.clear-gold,
 .clear-badge.clear-gold {

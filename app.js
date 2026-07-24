@@ -169,6 +169,7 @@ function handleClearInput(id, el) {
     save();
 
     el.className = `clear-select ${clearColorClass(clear || "")}`;
+    refreshTitles();
 }
 
 /* =========================================================
@@ -477,6 +478,7 @@ function handleScoreInput(id, el) {
         if (currentGame === "arcade") updateClearCellOnly(id, 0);
         renderDashboard();
         if (statsOpen) renderLevelGraph();
+        if (currentGame === "arcade") refreshTitles();
         return;
     }
 
@@ -511,6 +513,8 @@ function handleScoreInput(id, el) {
         }
         if (statsOpen) renderLevelGraph();
     }
+
+    if (currentGame === "arcade") refreshTitles();
 }
 
 function updateRankOnly(id, n) {
@@ -697,6 +701,7 @@ function resetAllRecords() {
     if (currentLevel) renderSongs();
     renderDashboard();
     if (statsOpen) renderLevelGraph();
+    renderProfile();
 
     closeDevPanel();
     alert("모든 게임의 점수 기록이 삭제되었습니다. (곡 목록은 유지됨)");
@@ -750,6 +755,7 @@ function addSong() {
         if (currentLevel) renderSongs();
         renderDashboard();
         if (statsOpen) renderLevelGraph();
+        refreshTitles();
     }
 
     reader.onload = (e) => process(e.target.result || "");
@@ -826,6 +832,7 @@ function deleteSong() {
     if (currentLevel) renderSongs();
     renderDashboard();
     if (statsOpen) renderLevelGraph();
+    refreshTitles();
 }
 
 /* 곡 수정: 4개 카테고리 레벨/제목/이미지(공통) 모두 수정 가능
@@ -899,6 +906,7 @@ function updateSong() {
         if (currentLevel) renderSongs();
         renderDashboard();
         if (statsOpen) renderLevelGraph();
+        refreshTitles();
 
         alert("수정 완료");
     }
@@ -1172,11 +1180,501 @@ function toggleStats() {
 }
 
 /* =========================================================
+   Phoenix 2 Pump Ability
+   - Arcade만 계산 (Rise 미포함)
+   - 싱글/더블 각각 독립적으로 상위 50곡 합산 (칭호 판정용)
+   - Total Pump Ability = 싱글+더블 곡을 전부 합친 풀에서
+     Pump Ability가 가장 높은 상위 50곡을 뽑아 합산한 값
+     (싱글 Pump Ability + 더블 Pump Ability를 단순히 더한 값이 아님)
+   - 곡별 Pump Ability = ((레벨 + 27 or 26) × (G - P - 235)) / 100
+     G = 점수 기반 랭크 점수, P = 클리어 판정(Plate) 점수
+   - 랭크가 AA 미만이거나 Plate(클리어 판정)가 지정되지 않은 곡은
+     Pump Ability를 계산할 수 없으므로 집계에서 제외
+========================================================= */
+const ARCADE_G_MAP = {
+    SSSap: 995,
+    SSSp:  995,
+    SSS:   990,
+    SSp:   985,
+    SS:    980,
+    Sp:    975,
+    S:     970,
+    AAAp:  960,
+    AAA:   950,
+    AAp:   925,
+    AA:    900
+    // Ap, A, "-" 는 Pump Ability 계산 대상 아님
+};
+
+const ARCADE_P_MAP = {
+    PG: 0,
+    UG: 2,
+    EG: 4,
+    SG: 6,
+    MG: 7,
+    TG: 8,
+    FG: 9,
+    RG: 10
+};
+
+function calcArcadeSongPumpAbility(level, G, P, modeKey) {
+    const bonus = modeKey === "single" ? 27 : 26;
+    return ((level + bonus) * (G - P - 235)) / 100;
+}
+
+/* 특정 모드(싱글/더블)의 Pump Ability 대상 곡 목록 (내림차순 정렬) */
+function getArcadePumpAbilityEntries(modeKey) {
+    const bucket = songData.arcade[modeKey] || {};
+    const records = userRecords.arcade;
+    const list = [];
+
+    Object.keys(bucket).forEach(levelStr => {
+        const level = Number(levelStr);
+        (bucket[levelStr] || []).forEach(song => {
+            const raw = records[song.id];
+            const score = extractScore(raw);
+
+            const rankKey = getArcadeRank(score);
+            const G = ARCADE_G_MAP[rankKey];
+            if (G === undefined) return; // AA 미만은 Pump Ability 대상 아님
+
+            const plate = score === 1000000 ? "PG" : (getClearType(song.id) || "");
+            const P = ARCADE_P_MAP[plate];
+            if (P === undefined) return; // 클리어 판정 미지정 시 계산 불가
+
+            const pumpAbility = calcArcadeSongPumpAbility(level, G, P, modeKey);
+
+            list.push({
+                id: song.id,
+                title: song.title,
+                level,
+                modeKey,
+                rankText: ARCADE_RANK_INFO[rankKey].text,
+                plate,
+                pumpAbility
+            });
+        });
+    });
+
+    list.sort((a, b) => b.pumpAbility - a.pumpAbility);
+    return list;
+}
+
+function sumPumpAbilityList(list) {
+    return list.reduce((sum, e) => sum + e.pumpAbility, 0);
+}
+
+function getSinglePumpAbility() {
+    return sumPumpAbilityList(getArcadePumpAbilityEntries("single").slice(0, 50));
+}
+
+function getDoublePumpAbility() {
+    return sumPumpAbilityList(getArcadePumpAbilityEntries("double").slice(0, 50));
+}
+
+/* 싱글+더블 전체 곡 풀에서 Pump Ability 상위 50곡만 뽑아 합산 */
+function getMergedPumpAbilityEntries() {
+    return [
+        ...getArcadePumpAbilityEntries("single"),
+        ...getArcadePumpAbilityEntries("double")
+    ].sort((a, b) => b.pumpAbility - a.pumpAbility);
+}
+
+function getTotalPumpAbility() {
+    return sumPumpAbilityList(getMergedPumpAbilityEntries().slice(0, 50));
+}
+
+/* Pump Ability 패널: 싱글 / 더블 / 전체 탭으로 나눠서 Top 50 목록 표시 */
+let pumpAbilityTab = "all"; // "single" | "double" | "all"
+
+const PUMP_ABILITY_TAB_LABEL = { single: "싱글", double: "더블", all: "전체" };
+
+function switchPumpAbilityTab(tab) {
+    pumpAbilityTab = tab;
+    renderPumpAbilityPanel();
+}
+
+function renderPumpAbilityPanel() {
+    const box = document.getElementById("pumpAbilityContent");
+    if (!box) return;
+
+    const singleList = getArcadePumpAbilityEntries("single");
+    const doubleList = getArcadePumpAbilityEntries("double");
+    const mergedList = getMergedPumpAbilityEntries();
+
+    const singlePA = sumPumpAbilityList(singleList.slice(0, 50));
+    const doublePA = sumPumpAbilityList(doubleList.slice(0, 50));
+    const totalPA = sumPumpAbilityList(mergedList.slice(0, 50));
+
+    const summaryHTML = `
+        <div class="rating-summary">
+            <div class="rating-main-title">🔥 Phoenix 2 Pump Ability</div>
+
+            <div class="rating-summary-row">
+                <span class="label">Single Pump Ability</span>
+                <span class="value">${singlePA.toFixed(2)}</span>
+            </div>
+
+            <div class="rating-summary-row">
+                <span class="label">Double Pump Ability</span>
+                <span class="value">${doublePA.toFixed(2)}</span>
+            </div>
+
+            <div class="rating-summary-row">
+                <span class="label">Total Pump Ability</span>
+                <span class="value">${totalPA.toFixed(2)}</span>
+            </div>
+        </div>
+    `;
+
+    const tabsHTML = `
+        <div class="pa-tabs">
+            <button class="pa-tab-btn ${pumpAbilityTab === "single" ? "active" : ""}" onclick="switchPumpAbilityTab('single')">싱글</button>
+            <button class="pa-tab-btn ${pumpAbilityTab === "double" ? "active" : ""}" onclick="switchPumpAbilityTab('double')">더블</button>
+            <button class="pa-tab-btn ${pumpAbilityTab === "all" ? "active" : ""}" onclick="switchPumpAbilityTab('all')">전체</button>
+        </div>
+    `;
+
+    const listSource = pumpAbilityTab === "single" ? singleList.slice(0, 50)
+        : pumpAbilityTab === "double" ? doubleList.slice(0, 50)
+        : mergedList.slice(0, 50);
+
+    const listHTML = listSource.length
+        ? listSource.map((e, idx) => `
+            <div class="rating-row">
+                <span class="rating-rank">${idx + 1}.</span>
+                <span class="rating-song">${e.modeKey === "single" ? "S" : "D"}${e.level} · ${e.title}</span>
+                <span class="rating-value">${e.pumpAbility.toFixed(2)}</span>
+            </div>
+        `).join("")
+        : `<div style="text-align:center; color:#888; padding:10px 0;">Pump Ability 대상 기록이 없습니다</div>`;
+
+    box.innerHTML = summaryHTML + tabsHTML +
+        `<div class="rating-list-title">Top 50 Pump Ability (${PUMP_ABILITY_TAB_LABEL[pumpAbilityTab]})</div>` +
+        listHTML;
+}
+
+function openRatingPanel() {
+    refreshTitles();
+    renderPumpAbilityPanel();
+    document.getElementById("ratingModal").style.display = "block";
+}
+
+function closeRatingPanel() {
+    document.getElementById("ratingModal").style.display = "none";
+}
+
+/* 모달 바깥(빈 공간) 클릭 시 닫기 - modal-box 안쪽 클릭은 무시 */
+function closeModalOnBackdrop(e, closeFn) {
+    if (e.target === e.currentTarget) closeFn();
+}
+
+/* =========================================================
+   칭호(Title) 시스템
+   - Single / Double / Total Pump Ability 기준으로 해금
+   - 최초 해금 시 1회만 토스트 표시, 이후 다시 알리지 않음
+   - 대표 칭호는 자유롭게 선택 가능, 프로필(왼쪽 상단)에 항상 표시
+   - 등급 표시는 배경색이 아닌 텍스트 색상만 사용
+========================================================= */
+function DEFAULT_TITLE_PROGRESS() {
+    return { unlocked: [], selected: null };
+}
+
+let titleProgress = DEFAULT_TITLE_PROGRESS();
+let profileName = null;
+
+function buildTierTitles(group, namePrefix, thresholds, colorForLevel) {
+    return thresholds.map((threshold, idx) => {
+        const level = idx + 1;
+        return {
+            id: `${group}_${namePrefix.replace(/\s+/g, "_")}_${level}`,
+            group,
+            name: `${namePrefix} LV.${level}`,
+            threshold,
+            color: colorForLevel(level)
+        };
+    });
+}
+
+const SINGLE_INTERMEDIATE = buildTierTitles(
+    "single", "[S] INTERMEDIATE",
+    [5000, 6000, 7000, 8000, 9000, 10000, 11000, 12000, 13000, 14000],
+    lv => (lv <= 7 ? "bronze" : "silver")
+);
+
+const SINGLE_ADVANCED = buildTierTitles(
+    "single", "[S] ADVANCED",
+    [15000, 15250, 15500, 15750, 16000, 16250, 16500, 16750, 17000, 17250],
+    lv => (lv <= 2 ? "gold" : lv <= 6 ? "diamond-light" : "diamond-dark")
+);
+
+const SINGLE_EXPERT = buildTierTitles(
+    "single", "[S] EXPERT",
+    [17500, 17700, 17900, 18100, 18300, 18500, 18600, 18700, 18800, 18900],
+    lv => (lv <= 5 ? "ruby" : "amethyst")
+);
+
+const SINGLE_MASTER = [{
+    id: "single_master",
+    group: "single",
+    name: "SINGLE MASTER",
+    threshold: 19000,
+    color: "rainbow"
+}];
+
+const DOUBLE_INTERMEDIATE = buildTierTitles(
+    "double", "[D] INTERMEDIATE",
+    [5000, 6000, 7000, 8000, 9000, 10000, 11000, 12000, 13000, 14000],
+    lv => (lv <= 7 ? "bronze" : "silver")
+);
+
+const DOUBLE_ADVANCED = buildTierTitles(
+    "double", "[D] ADVANCED",
+    [15000, 15300, 15600, 15900, 16200, 16500, 16800, 17100, 17400, 17700],
+    lv => (lv <= 2 ? "gold" : lv <= 6 ? "diamond-light" : "diamond-dark")
+);
+
+const DOUBLE_EXPERT = buildTierTitles(
+    "double", "[D] EXPERT",
+    [18000, 18200, 18400, 18600, 18800, 19000, 19100, 19200, 19300, 19400],
+    lv => (lv <= 6 ? "ruby" : "amethyst")
+);
+
+const DOUBLE_MASTER = [{
+    id: "double_master",
+    group: "double",
+    name: "DOUBLE MASTER",
+    threshold: 19500,
+    color: "rainbow"
+}];
+
+const TOTAL_TITLES = [
+    { id: "total_bronze",      group: "total", name: "[P.B] BRONZE",      threshold: 10000, color: "bronze" },
+    { id: "total_silver",      group: "total", name: "[P.B] SILVER",      threshold: 12500, color: "silver" },
+    { id: "total_gold",        group: "total", name: "[P.B] GOLD",        threshold: 15000, color: "gold" },
+    { id: "total_platinum",    group: "total", name: "[P.B] PLATINUM",    threshold: 16000, color: "diamond-light" },
+    { id: "total_diamond",     group: "total", name: "[P.B] DIAMOND",     threshold: 17000, color: "diamond-dark" },
+    { id: "total_red_beryl",   group: "total", name: "[P.B] RED BERYL",   threshold: 18000, color: "ruby" },
+    { id: "total_alexandrite", group: "total", name: "[P.B] ALEXANDRITE", threshold: 19000, color: "amethyst" },
+    { id: "total_taaffeite",   group: "total", name: "[P.B] TAAFFEITE",   threshold: 20000, color: "rainbow" }
+];
+
+const TITLE_DEFS = [
+    ...SINGLE_INTERMEDIATE, ...SINGLE_ADVANCED, ...SINGLE_EXPERT, ...SINGLE_MASTER,
+    ...DOUBLE_INTERMEDIATE, ...DOUBLE_ADVANCED, ...DOUBLE_EXPERT, ...DOUBLE_MASTER,
+    ...TOTAL_TITLES
+];
+
+const TITLE_GROUP_LABEL = {
+    single: "Single Pump Ability",
+    double: "Double Pump Ability",
+    total: "Total Pump Ability"
+};
+
+function getTitleDefById(id) {
+    return TITLE_DEFS.find(t => t.id === id) || null;
+}
+
+/* 토스트 큐 (여러 개 동시 해금 시 순차 표시) */
+let titleToastQueue = [];
+let titleToastShowing = false;
+
+function queueTitleToast(name) {
+    titleToastQueue.push(name);
+    if (!titleToastShowing) processTitleToastQueue();
+}
+
+function processTitleToastQueue() {
+    const el = document.getElementById("titleToast");
+    if (!titleToastQueue.length || !el) {
+        titleToastShowing = false;
+        return;
+    }
+
+    titleToastShowing = true;
+    const name = titleToastQueue.shift();
+    el.textContent = `🎉 새로운 칭호를 획득했습니다! (${name})`;
+    el.classList.add("show");
+
+    setTimeout(() => {
+        el.classList.remove("show");
+        setTimeout(processTitleToastQueue, 300);
+    }, 2200);
+}
+
+/* Pump Ability를 다시 계산하여 새로 해금된 칭호가 있으면 기록 + 토스트 표시
+   silent=true 인 경우 (불러오기/최초 로드) 조건 충족 칭호를 조용히 기록만 하고 토스트는 띄우지 않음 */
+function refreshTitles(silent) {
+    const singlePA = getSinglePumpAbility();
+    const doublePA = getDoublePumpAbility();
+    const totalPA = getTotalPumpAbility();
+
+    const unlockedSet = new Set(titleProgress.unlocked);
+
+    TITLE_DEFS.forEach(t => {
+        if (unlockedSet.has(t.id)) return;
+
+        const value = t.group === "single" ? singlePA
+            : t.group === "double" ? doublePA
+            : totalPA;
+
+        if (value >= t.threshold) {
+            unlockedSet.add(t.id);
+            titleProgress.unlocked.push(t.id);
+            if (!silent) queueTitleToast(t.name);
+        }
+    });
+
+    renderProfile();
+}
+
+/* 왼쪽 상단 프로필: 원(Total Pump Ability, 등급 색 채움) + 대표 칭호 바 + 이름 바 */
+function getTotalTierColor(totalPA) {
+    let color = null;
+    TOTAL_TITLES.forEach(t => {
+        if (totalPA >= t.threshold) color = t.color;
+    });
+    return color; // null이면 아직 어떤 Total 칭호도 달성 못한 상태
+}
+
+function renderProfile() {
+    const titleEl = document.getElementById("profileTitleText");
+    const nameEl = document.getElementById("profileNameText");
+    const avatarEl = document.getElementById("profileAvatar");
+    const avatarValueEl = document.getElementById("profileAvatarValue");
+    if (!titleEl || !nameEl || !avatarEl || !avatarValueEl) return;
+
+    const def = titleProgress.selected ? getTitleDefById(titleProgress.selected) : null;
+
+    if (def) {
+        titleEl.textContent = def.name;
+        titleEl.className = `profile-title-bar title-name-text title-text-${def.color}`;
+    } else {
+        titleEl.textContent = "칭호 없음";
+        titleEl.className = "profile-title-bar";
+    }
+
+    nameEl.textContent = profileName || "이름 설정";
+
+    const totalPA = getTotalPumpAbility();
+    avatarValueEl.textContent = totalPA.toFixed(2);
+
+    const tierColor = getTotalTierColor(totalPA);
+    avatarEl.className = `profile-avatar ${tierColor ? `avatar-${tierColor}` : "avatar-none"}`;
+}
+
+function editProfileName() {
+    const current = profileName || "";
+    const input = prompt("표시할 이름을 입력하세요", current);
+    if (input === null) return; // 취소
+    profileName = input.trim() || null;
+    renderProfile();
+}
+
+function selectTitle(id) {
+    if (!titleProgress.unlocked.includes(id)) return;
+    titleProgress.selected = titleProgress.selected === id ? null : id;
+    renderProfile();
+    renderTitlePanel();
+}
+
+function renderTitleGroupHTML(groupKey, groupLabel, currentValue, titles) {
+    const rows = titles.map(t => {
+        const unlocked = titleProgress.unlocked.includes(t.id);
+        const isSelected = titleProgress.selected === t.id;
+
+        return `
+            <div class="title-item ${unlocked ? "" : "locked"}">
+                <span class="title-name-text title-text-${t.color}">${t.name}</span>
+
+                <div class="title-item-info">
+                    <div class="title-item-condition">
+                        조건: ${groupLabel} ${t.threshold.toLocaleString()} 이상
+                    </div>
+                </div>
+
+                <span class="title-item-status ${unlocked ? "unlocked" : "locked-status"}">
+                    ${unlocked ? "✔ 해금" : "🔒 미해금"}
+                </span>
+
+                ${unlocked ? `
+                    <button
+                        class="title-select-btn ${isSelected ? "is-selected" : ""}"
+                        onclick="selectTitle('${t.id}')"
+                    >
+                        ${isSelected ? "대표 해제" : "대표 설정"}
+                    </button>
+                ` : ""}
+            </div>
+        `;
+    }).join("");
+
+    return `
+        <div class="title-section-heading">
+            ${groupLabel} : ${currentValue.toFixed(2)}
+        </div>
+        ${rows}
+    `;
+}
+
+function renderTitlePanel() {
+    const box = document.getElementById("titleContent");
+    if (!box) return;
+
+    const singlePA = getSinglePumpAbility();
+    const doublePA = getDoublePumpAbility();
+    const totalPA = getTotalPumpAbility();
+
+    const html = [
+        renderTitleGroupHTML("single", TITLE_GROUP_LABEL.single, singlePA, [
+            ...SINGLE_INTERMEDIATE, ...SINGLE_ADVANCED, ...SINGLE_EXPERT, ...SINGLE_MASTER
+        ]),
+        renderTitleGroupHTML("double", TITLE_GROUP_LABEL.double, doublePA, [
+            ...DOUBLE_INTERMEDIATE, ...DOUBLE_ADVANCED, ...DOUBLE_EXPERT, ...DOUBLE_MASTER
+        ]),
+        renderTitleGroupHTML("total", TITLE_GROUP_LABEL.total, totalPA, TOTAL_TITLES)
+    ].join("");
+
+    box.innerHTML = html;
+}
+
+function openTitlePanel() {
+    refreshTitles();
+    renderTitlePanel();
+    document.getElementById("titleModal").style.display = "block";
+}
+
+function closeTitlePanel() {
+    document.getElementById("titleModal").style.display = "none";
+}
+
+/* =========================================================
    백업 / 불러오기 (새 데이터 구조 저장, 구버전 백업 자동 변환)
 ========================================================= */
 function exportJSON() {
+    const singlePA = getSinglePumpAbility();
+    const doublePA = getDoublePumpAbility();
+    const totalPA = getTotalPumpAbility();
+
+    const backup = {
+        songData,
+        userRecords,
+        titleProgress: {
+            unlocked: titleProgress.unlocked,
+            selected: titleProgress.selected
+        },
+        profile: {
+            name: profileName
+        },
+        phoenixPumpAbility: {
+            singlePumpAbility: singlePA,
+            doublePumpAbility: doublePA,
+            totalPumpAbility: totalPA
+        }
+    };
+
     const blob = new Blob(
-        [JSON.stringify({ songData, userRecords })],
+        [JSON.stringify(backup)],
         { type: "application/json" }
     );
     const url = URL.createObjectURL(blob);
@@ -1198,8 +1696,16 @@ function importJSON(e) {
             songData = normalizeSongData(data.songData);
             userRecords = normalizeUserRecords(data.userRecords);
 
+            titleProgress = {
+                unlocked: Array.isArray(data.titleProgress?.unlocked) ? data.titleProgress.unlocked : [],
+                selected: data.titleProgress?.selected || null
+            };
+            profileName = data.profile?.name || null;
+
             save();
             changeGame(currentGame);
+            refreshTitles(true);
+            renderProfile();
         } catch (err) {
             alert("불러오기 실패: 올바른 백업 파일이 아닙니다.");
         } finally {
@@ -1214,6 +1720,8 @@ function importJSON(e) {
 ========================================================= */
 window.onload = () => {
     changeGame("rise");
+    refreshTitles(true);
+    renderProfile();
 };
 
 window.changeGame = changeGame;
@@ -1239,3 +1747,11 @@ window.closeDevPanel = closeDevPanel;
 window.exportSongListOnly = exportSongListOnly;
 window.resetAllRecords = resetAllRecords;window.openNearPerfectPanel = openNearPerfectPanel;
 window.closeNearPerfectPanel = closeNearPerfectPanel;
+window.openRatingPanel = openRatingPanel;
+window.closeRatingPanel = closeRatingPanel;
+window.openTitlePanel = openTitlePanel;
+window.closeTitlePanel = closeTitlePanel;
+window.selectTitle = selectTitle;
+window.editProfileName = editProfileName;
+window.switchPumpAbilityTab = switchPumpAbilityTab;
+window.closeModalOnBackdrop = closeModalOnBackdrop;

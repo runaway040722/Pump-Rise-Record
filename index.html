@@ -12,6 +12,18 @@
 
 <div class="container">
 
+    <!-- 프로필: 원(Total Pump Ability, 칭호 등급 색 채움) + 대표 칭호 + 이름 -->
+    <div id="profileBox" class="profile-card">
+        <div id="profileAvatar" class="profile-avatar">
+            <span id="profileAvatarValue">0.00</span>
+        </div>
+        <div class="profile-info">
+            <div id="profileTitleText" class="profile-title-bar" onclick="openTitlePanel()"></div>
+            <div id="profileNameText" class="profile-name-bar" onclick="editProfileName()"></div>
+        </div>
+    </div>
+
+
     <!-- 게임 선택 -->
     <div class="game-select">
         <button data-game="rise" onclick="changeGame('rise')">Rise</button>
@@ -22,6 +34,11 @@
     <div class="header">
         <h2 id="gameTitle" onclick="handleTitleClick()">🎮 Rise 기록지</h2>
         <button onclick="openRegister()">+ 곡 등록</button>
+    </div>
+
+    <div class="util-menu">
+        <button onclick="openRatingPanel()">🏆 Phoenix Pump Ability</button>
+        <button onclick="openTitlePanel()">🎖 칭호</button>
     </div>
 
     <div id="dashboard"></div>
@@ -296,6 +313,47 @@
     </div>
 
 </div>
+
+<!-- Phoenix Pump Ability 패널 -->
+<div id="ratingModal" class="modal" onclick="closeModalOnBackdrop(event, closeRatingPanel)">
+
+    <div class="modal-box">
+
+        <div id="pumpAbilityContent"></div>
+
+        <hr>
+
+        <div class="modal-btns">
+            <button onclick="closeRatingPanel()">
+                닫기
+            </button>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- 칭호 패널 -->
+<div id="titleModal" class="modal" onclick="closeModalOnBackdrop(event, closeTitlePanel)">
+
+    <div class="modal-box">
+
+        <div id="titleContent"></div>
+
+        <hr>
+
+        <div class="modal-btns">
+            <button onclick="closeTitlePanel()">
+                닫기
+            </button>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- 칭호 획득 토스트 -->
+<div id="titleToast" class="title-toast"></div>
 
 </body>
 </html>
