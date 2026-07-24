@@ -97,6 +97,81 @@ function getRankInfo(n) {
 }
 
 /* =========================================================
+   아케이드 클리어 판정 (PG/UG/EG/SG/MG/TG/FG/RG)
+   - PG(올퍼펙)는 점수가 100만점이면 자동으로 표시됨
+   - 나머지는 점수만으로 구분이 안 되어 직접 선택 입력
+========================================================= */
+const CLEAR_TYPES = ["UG", "EG", "SG", "MG", "TG", "FG", "RG"];
+
+const CLEAR_TYPE_LABEL = {
+    PG: "올퍼펙",
+    UG: "그렛 이하 판정 없음",
+    EG: "굿 이하 판정 없음",
+    SG: "미스 없음",
+    MG: "미스 5개 이하",
+    TG: "미스 10개 이하",
+    FG: "미스 20개 이하",
+    RG: "미스 21개 이상"
+};
+
+/* userRecords.arcade[id] 는 숫자(점수만) 또는 {score, clear} 객체 둘 다 허용 (레거시 호환) */
+function extractScore(record) {
+    if (record && typeof record === "object") return Number(record.score || 0);
+    return Number(record || 0);
+}
+
+function getClearType(id) {
+    const record = userRecords.arcade[id];
+    if (record && typeof record === "object") return record.clear || "";
+    return "";
+}
+
+/* PG/UG=다이아, EG/SG=금, MG/TG=은, FG/RG=동 */
+function clearColorClass(value) {
+    if (value === "PG" || value === "UG") return "clear-diamond";
+    if (value === "EG" || value === "SG") return "clear-gold";
+    if (value === "MG" || value === "TG") return "clear-silver";
+    if (value === "FG" || value === "RG") return "clear-bronze";
+    return "";
+}
+
+function buildClearCellHTML(id, n) {
+    if (n === 1000000) {
+        return `<div class="clear-badge ${clearColorClass("PG")}" title="${CLEAR_TYPE_LABEL.PG}">PG</div>`;
+    }
+
+    const current = getClearType(id);
+    const options = CLEAR_TYPES.map(c => {
+        const selected = current === c ? " selected" : "";
+        return `<option value="${c}"${selected} title="${CLEAR_TYPE_LABEL[c]}">${c}</option>`;
+    }).join("");
+
+    return `
+        <select class="clear-select ${clearColorClass(current)}" onchange="handleClearInput('${id}', this)">
+            <option value=""${current === "" ? " selected" : ""}>-</option>
+            ${options}
+        </select>
+    `;
+}
+
+function updateClearCellOnly(id, n) {
+    const cell = document.getElementById(`clear-${id}`);
+    if (!cell) return;
+    cell.innerHTML = buildClearCellHTML(id, n);
+}
+
+function handleClearInput(id, el) {
+    const clear = el.value || null;
+    const records = userRecords.arcade;
+    const existing = records[id];
+    const score = extractScore(existing);
+    records[id] = { score, clear };
+    save();
+
+    el.className = `clear-select ${clearColorClass(clear || "")}`;
+}
+
+/* =========================================================
    데이터 로딩 / 저장 (localStorage)
 ========================================================= */
 function DEFAULT_SONGDATA() {
@@ -320,7 +395,7 @@ function renderSongs() {
 
     if (showUnclearedOnly) {
         songs = songs.filter(song => {
-            const score = Number(records[song.id] || 0);
+            const score = extractScore(records[song.id]);
             return score < 1000000;
         });
     }
@@ -342,26 +417,23 @@ function renderSongs() {
     });
 
     if (currentLevel && statsBox) {
-        const stats = getLevelStats(currentLevel);
-
-        statsBox.innerHTML = `
-            <div style="text-align:center;font-size:18px;font-weight:bold;">
-                ${cfg.prefix}${currentLevel}
-                올퍼펙 비율 ${stats.percent}%
-                (${stats.cleared}/${stats.total})
-            </div>
-        `;
+        statsBox.innerHTML = buildLevelStatsHTML(currentLevel);
     } else if (statsBox) {
         statsBox.innerHTML = "";
     }
 
     songs.forEach(song => {
-        const score = records[song.id] ?? "";
-        const n = Number(score);
+        const rawRecord = records[song.id];
+        const score = rawRecord === undefined ? "" : extractScore(rawRecord);
+        const n = Number(score || 0);
         const info = getRankInfo(n);
 
         const div = document.createElement("div");
-        div.className = "song";
+        div.className = currentGame === "arcade" ? "song song-arcade" : "song";
+
+        const clearCellHTML = currentGame === "arcade"
+            ? `<div id="clear-${song.id}" class="clear-cell">${buildClearCellHTML(song.id, n)}</div>`
+            : "";
 
         div.innerHTML = `
             <img src="${song.image || ''}" />
@@ -370,11 +442,13 @@ function renderSongs() {
             </div>
             <input
                 value="${score}"
+                inputmode="numeric"
                 oninput="handleScoreInput('${song.id}', this)"
             />
             <div id="rank-${song.id}" class="rank ${info.cls}">
                 ${info.text}
             </div>
+            ${clearCellHTML}
         `;
 
         list.appendChild(div);
@@ -389,12 +463,18 @@ function renderSongs() {
 ========================================================= */
 function handleScoreInput(id, el) {
     const records = currentRecords();
+
+    // 숫자 외 문자는 입력 즉시 제거
+    const sanitized = el.value.replace(/[^0-9]/g, "");
+    if (sanitized !== el.value) el.value = sanitized;
+
     let val = el.value;
 
     if (val.trim() === "") {
         delete records[id];
         save();
         updateRankOnly(id);
+        if (currentGame === "arcade") updateClearCellOnly(id, 0);
         renderDashboard();
         if (statsOpen) renderLevelGraph();
         return;
@@ -406,7 +486,12 @@ function handleScoreInput(id, el) {
     if (n > 1000000) n = 1000000;
     if (n < 0) n = 0;
 
-    records[id] = n;
+    if (currentGame === "arcade") {
+        const clear = getClearType(id) || null;
+        records[id] = { score: n, clear };
+    } else {
+        records[id] = n;
+    }
     save();
 
     if (Number(val) !== n) {
@@ -417,26 +502,19 @@ function handleScoreInput(id, el) {
         renderSongs();
     } else {
         updateRankOnly(id, n);
+        if (currentGame === "arcade") updateClearCellOnly(id, n);
         renderDashboard();
 
         const statsBox = document.getElementById("levelStats");
         if (currentLevel && statsBox) {
-            const stats = getLevelStats(currentLevel);
-            const cfg = currentModeConfig();
-            statsBox.innerHTML = `
-                <div style="text-align:center;font-size:18px;font-weight:bold;">
-                    ${cfg.prefix}${currentLevel}
-                    올퍼펙 비율 ${stats.percent}%
-                    (${stats.cleared}/${stats.total})
-                </div>
-            `;
+            statsBox.innerHTML = buildLevelStatsHTML(currentLevel);
         }
         if (statsOpen) renderLevelGraph();
     }
 }
 
 function updateRankOnly(id, n) {
-    if (n === undefined) n = Number(currentRecords()[id] || 0);
+    if (n === undefined) n = extractScore(currentRecords()[id]);
 
     const rankEl = document.getElementById(`rank-${id}`);
     if (!rankEl) return;
@@ -456,30 +534,54 @@ function toggleUncleared() {
     renderSongs();
 }
 
-function randomSong() {
-    let songs = songData?.[currentGame]?.[mode]?.[currentLevel] || [];
-    if (!songs.length) {
-        alert("곡이 없습니다.");
-        return;
-    }
-    const song = songs[Math.floor(Math.random() * songs.length)];
-    alert("🎲 랜덤 곡\n\n" + song.title);
+/* =========================================================
+   랜덤 (하나의 버튼 + 드롭다운: 전체 / 올퍼 제외 / 미등록)
+========================================================= */
+function toggleRandomMenu(event) {
+    if (event) event.stopPropagation();
+    const menu = document.getElementById("randomMenu");
+    if (!menu) return;
+    menu.style.display = menu.style.display === "block" ? "none" : "block";
 }
 
-function randomUnclearedSong() {
+function closeRandomMenu() {
+    const menu = document.getElementById("randomMenu");
+    if (menu) menu.style.display = "none";
+}
+
+document.addEventListener("click", (e) => {
+    const wrapper = document.getElementById("randomDropdown");
+    if (wrapper && !wrapper.contains(e.target)) {
+        closeRandomMenu();
+    }
+});
+
+const RANDOM_MODE_LABEL = {
+    all: "전체 랜덤",
+    uncleared: "올퍼 제외 랜덤",
+    unrecorded: "미등록 랜덤"
+};
+
+function runRandom(type) {
+    closeRandomMenu();
+
     const records = currentRecords();
     let songs = songData?.[currentGame]?.[mode]?.[currentLevel] || [];
-    songs = songs.filter(song => {
-        const score = Number(records[song.id] || 0);
-        return score < 1000000;
-    });
+
+    if (type === "uncleared") {
+        songs = songs.filter(song => extractScore(records[song.id]) < 1000000);
+    } else if (type === "unrecorded") {
+        songs = songs.filter(song => records[song.id] === undefined);
+    }
 
     if (!songs.length) {
-        alert("100만점 미달성 곡이 없습니다.");
+        alert("조건에 맞는 곡이 없습니다.");
         return;
     }
+
     const song = songs[Math.floor(Math.random() * songs.length)];
-    alert("🎲 100만점 제외 랜덤\n\n" + song.title);
+    const label = RANDOM_MODE_LABEL[type] || "랜덤";
+    alert(`🎲 ${label}\n\n${song.title}`);
 }
 
 function goBack() {
@@ -821,12 +923,69 @@ function getLevelStats(level) {
     let cleared = 0;
 
     songs.forEach(song => {
-        const score = Number(records[song.id] || 0);
+        const score = extractScore(records[song.id]);
         if (score >= 1000000) cleared++;
     });
 
     const percent = total === 0 ? 0 : Math.floor((cleared / total) * 100);
     return { total, cleared, percent };
+}
+
+/* Arcade 전용: 레벨 내 랭크별 곡 개수 분포 (SSS+ 4개, SSS 3개 ... 식) */
+const ARCADE_RANK_ORDER = [
+    "SSSap", "SSSp", "SSS", "SSp", "SS", "Sp", "S",
+    "AAAp", "AAA", "AAp", "AA", "Ap", "A"
+];
+
+function getArcadeRankDistribution(level) {
+    const songs = songData?.arcade?.[mode]?.[level] || [];
+    const records = userRecords.arcade;
+
+    // 같은 표시 텍스트(예: 100만점 SSS+ 와 995000+ SSS+)는 하나로 합산
+    const counts = {};
+
+    songs.forEach(song => {
+        const n = extractScore(records[song.id]);
+        const key = getArcadeRank(n);
+        if (key === "-") return;
+        const text = ARCADE_RANK_INFO[key].text;
+        counts[text] = (counts[text] || 0) + 1;
+    });
+
+    const textOrder = [...new Set(ARCADE_RANK_ORDER.map(key => ARCADE_RANK_INFO[key].text))];
+
+    return textOrder
+        .filter(text => counts[text] > 0)
+        .map(text => ({ text, count: counts[text] }));
+}
+
+/* 레벨 진입 화면 상단 통계 HTML (올퍼펙 비율 + Arcade는 랭크 분포도 함께) */
+function buildLevelStatsHTML(level) {
+    const stats = getLevelStats(level);
+    const cfg = currentModeConfig();
+
+    let html = `
+        <div style="text-align:center;font-size:18px;font-weight:bold;">
+            ${cfg.prefix}${level}
+            올퍼펙 비율 ${stats.percent}%
+            (${stats.cleared}/${stats.total})
+        </div>
+    `;
+
+    if (currentGame === "arcade") {
+        const dist = getArcadeRankDistribution(level);
+        const line = dist.length
+            ? dist.map(d => `${d.text} ${d.count}개`).join(" · ")
+            : "아직 달성한 랭크가 없습니다";
+
+        html += `
+            <div style="text-align:center;font-size:13px;color:#ccc;margin-top:4px;">
+                ${line}
+            </div>
+        `;
+    }
+
+    return html;
 }
 
 function getGlobalStats() {
@@ -842,7 +1001,7 @@ function getGlobalStats() {
         Object.keys(bucket).forEach(level => {
             (bucket[level] || []).forEach(song => {
                 total++;
-                const score = Number(records[song.id] || 0);
+                const score = extractScore(records[song.id]);
                 if (score >= 1000000) cleared++;
             });
         });
@@ -884,6 +1043,86 @@ function renderDashboard() {
             ${modeLine}
         </div>
     `;
+}
+
+/* =========================================================
+   올퍼 근접곡 (버튼을 눌러 들어가는 별도 패널)
+   - 1그렛 정도로 100만점을 놓친 곡들을 모아서 보여줌
+   - 그렛 하나당 대략 250~350점 정도 깎이므로 999600점을 기준으로 잡음
+     (곡의 노트 수에 따라 실제 감점 폭은 달라질 수 있음)
+   - 현재 보고 있는 게임+모드 기준으로만 표시 (예: 아케이드 싱글을
+     보고 있으면 아케이드 싱글 근접곡만), 레벨(난이도) 오름차순 정렬
+========================================================= */
+const NEAR_PERFECT_THRESHOLD = 999600;
+
+function getNearPerfectSongs() {
+    const records = currentRecords();
+    const bucket = songData[currentGame][mode];
+    const list = [];
+
+    Object.keys(bucket).forEach(level => {
+        (bucket[level] || []).forEach(song => {
+            const score = extractScore(records[song.id]);
+            if (score >= NEAR_PERFECT_THRESHOLD && score < 1000000) {
+                list.push({
+                    title: song.title,
+                    level: Number(level),
+                    score,
+                    gap: 1000000 - score
+                });
+            }
+        });
+    });
+
+    // 난이도(레벨) 오름차순, 같은 레벨이면 100만점에 가까운 순
+    list.sort((a, b) => {
+        if (a.level !== b.level) return a.level - b.level;
+        return b.score - a.score;
+    });
+
+    return list;
+}
+
+function renderNearPerfectPanel() {
+    const box = document.getElementById("nearPerfectContent");
+    if (!box) return;
+
+    const cfg = currentModeConfig();
+    const list = getNearPerfectSongs();
+
+    const titleHTML = `
+        <div style="font-weight:bold; margin-bottom:10px; text-align:center;">
+            ${GAME_CONFIG[currentGame].label} ${cfg.label} · 올퍼 근접곡
+            <div style="font-weight:normal; font-size:12px; color:#888; margin-top:4px;">
+                ${NEAR_PERFECT_THRESHOLD.toLocaleString()}점 이상
+            </div>
+        </div>
+    `;
+
+    if (!list.length) {
+        box.innerHTML = titleHTML + `
+            <div style="text-align:center; color:#888; padding:10px 0;">
+                근접곡이 없습니다
+            </div>
+        `;
+        return;
+    }
+
+    box.innerHTML = titleHTML + list.map(item => `
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:14px; padding:6px 10px; background:#1b1f27; border-radius:6px; margin:4px 0; white-space:nowrap;">
+            <span>${cfg.prefix}${item.level} · ${item.title}</span>
+            <span style="color:#f1c40f; font-weight:bold;">${item.score.toLocaleString()} (-${item.gap})</span>
+        </div>
+    `).join("");
+}
+
+function openNearPerfectPanel() {
+    renderNearPerfectPanel();
+    document.getElementById("nearPerfectModal").style.display = "block";
+}
+
+function closeNearPerfectPanel() {
+    document.getElementById("nearPerfectModal").style.display = "none";
 }
 
 function renderLevelGraph() {
@@ -985,8 +1224,8 @@ window.closeRegister = closeRegister;
 window.exportJSON = exportJSON;
 window.importJSON = importJSON;
 window.goBack = goBack;
-window.randomSong = randomSong;
-window.randomUnclearedSong = randomUnclearedSong;
+window.toggleRandomMenu = toggleRandomMenu;
+window.runRandom = runRandom;
 window.toggleUncleared = toggleUncleared;
 window.toggleStats = toggleStats;
 window.findSongForEdit = findSongForEdit;
@@ -998,4 +1237,5 @@ window.handleTitleClick = handleTitleClick;
 window.openDevPanel = openDevPanel;
 window.closeDevPanel = closeDevPanel;
 window.exportSongListOnly = exportSongListOnly;
-window.resetAllRecords = resetAllRecords;
+window.resetAllRecords = resetAllRecords;window.openNearPerfectPanel = openNearPerfectPanel;
+window.closeNearPerfectPanel = closeNearPerfectPanel;

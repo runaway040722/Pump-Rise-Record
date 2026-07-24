@@ -26,6 +26,10 @@
 
     <div id="dashboard"></div>
 
+    <button onclick="openNearPerfectPanel()" id="nearPerfectBtn">
+        🔥 올퍼 근접곡 보기
+    </button>
+
     <button onclick="toggleStats()" id="toggleStatsBtn">
         📊 통계 펼치기
     </button>
@@ -54,13 +58,16 @@
             100만점 제외 보기
         </button>
 
-        <button onclick="randomSong()">
-            곡 랜덤
-        </button>
-
-        <button onclick="randomUnclearedSong()">
-            100만점 제외 랜덤
-        </button>
+        <div id="randomDropdown" class="random-dropdown">
+            <button onclick="toggleRandomMenu(event)">
+                🎲 랜덤 ▼
+            </button>
+            <div id="randomMenu" class="random-menu" style="display:none;">
+                <button onclick="runRandom('all')">전체</button>
+                <button onclick="runRandom('uncleared')">올퍼 제외</button>
+                <button onclick="runRandom('unrecorded')">미등록</button>
+            </div>
+        </div>
 
         <button onclick="goBack()">
             뒤로가기
@@ -220,6 +227,25 @@
                 닫기
             </button>
 
+        </div>
+
+    </div>
+
+</div>
+
+<!-- 올퍼 근접곡 패널 -->
+<div id="nearPerfectModal" class="modal">
+
+    <div class="modal-box">
+
+        <div id="nearPerfectContent"></div>
+
+        <hr>
+
+        <div class="modal-btns">
+            <button onclick="closeNearPerfectPanel()">
+                닫기
+            </button>
         </div>
 
     </div>

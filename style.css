@@ -93,6 +93,38 @@ button:hover {
     margin: 10px 0;
 }
 
+/* 랜덤 드롭다운 */
+.random-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.random-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+
+    min-width: 110px;
+
+    background: #1b1f27;
+    border: 1px solid #333;
+    border-radius: 8px;
+
+    padding: 6px;
+
+    z-index: 20;
+
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.random-menu button {
+    width: 100%;
+    margin: 0;
+    text-align: left;
+}
+
 #searchBox {
     flex: 1;
     min-width: 150px;
@@ -339,6 +371,12 @@ button:hover {
     border-radius: 10px;
 }
 
+/* 올퍼 근접곡 패널: 곡 제목이 길어도 줄바꿈 없이 한 줄로 보이도록 더 넓게 */
+#nearPerfectModal .modal-box {
+    width: min(94vw, 620px);
+    overflow-x: auto;
+}
+
 .modal-box input {
     width: 100%;
 
@@ -407,4 +445,69 @@ button:hover {
     margin: 8px 0;
     width: 100%;
     background: #2c3e50;
+}
+/* Arcade: 판정(PG/UG/EG...) 열이 하나 더 있음 */
+.song.song-arcade {
+    grid-template-columns: 45px minmax(0,1fr) 100px 70px 74px;
+}
+
+.clear-cell {
+    display: flex;
+    justify-content: center;
+    margin-left: 10px;
+}
+
+.clear-select {
+    width: 100%;
+    height: 30px;
+
+    text-align: center;
+    text-align-last: center;
+
+    background: #2c3e50;
+    color: white;
+
+    border: none;
+    border-radius: 6px;
+
+    font-size: 12px;
+}
+
+.clear-badge {
+    width: 100%;
+
+    text-align: center;
+    font-weight: bold;
+    font-size: 12px;
+
+    padding: 4px 0;
+    border-radius: 6px;
+}
+
+/* PG / UG : 다이아몬드색 */
+.clear-select.clear-diamond,
+.clear-badge.clear-diamond {
+    background: linear-gradient(135deg, #e0f7ff, #ffffff 50%, #a6e6ff);
+    color: #0a3d62;
+}
+
+/* EG / SG : 금색 */
+.clear-select.clear-gold,
+.clear-badge.clear-gold {
+    background: #ffd700;
+    color: black;
+}
+
+/* MG / TG : 은색 */
+.clear-select.clear-silver,
+.clear-badge.clear-silver {
+    background: silver;
+    color: black;
+}
+
+/* FG / RG : 동색 */
+.clear-select.clear-bronze,
+.clear-badge.clear-bronze {
+    background: #cd7f32;
+    color: black;
 }
